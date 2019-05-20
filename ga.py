@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
 import numpy as np # for sampling without replacement
+import random
+import copy
 
 '''Test Case Generator for Python'''
 
@@ -98,6 +100,39 @@ class GeneticEnvironment(object):
             # cleanup
             curr_pop = new_gen[:]
         return curr_pop # end after given number of iterations
+
+	def _crossover(self, father, mother):
+		children_method_seq = self._cut_and_splice_crossover(father.get_method_seq(), mother.get_method_seq())
+		children_const_inputs = self._single_point_crossover(father.get_const_inputs(), mother.get_const_inputs())
+
+		child1 = copy.deepcopy(father)
+		child1.set_method_seq(children_method_seq[0])
+		child1.set_const_inputs(children_const_inputs[0])
+
+		child2 = copy.deepcopy(mother)
+		child2.set_method_seq(children_method_seq[1])
+		child2.set_const_inputs(children_const_inputs[1])
+
+		return (child1, child2)
+
+	def _cut_and_splice_crossover(self, father, mother):
+		# for method call lists
+		index1 = random.randint(1, len(father) - 1)
+		index2 = random.randint(1, len(mother) - 1)
+
+		child1 = father[:index1] + mother[index2:]
+		child2 = mother[:index2] + father[index1:]
+
+		return (child1, child2)
+	
+	def _single_point_crossover(self, father, mother):
+		# for argument lists
+		index = random.randint(1, min(len(father), len(mother)) - 1)
+
+		child1 = father[:index] + mother[index:]
+		child2 = mother[:index] + father[index:]
+
+		return (child1, child2)
 
 #ge = GeneticEnvironment('apple', 'pear')	
 #print(ge._tournament_sel(list((i, i) for i in range(50))))
