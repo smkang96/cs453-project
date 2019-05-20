@@ -92,7 +92,7 @@ class GeneticEnvironment(object):
             new_gen = sel_indivs[:]
             while len(new_gen) < self._pop_size:
                 parents = np.random.choice(sel_indivs, size=2, replace=False)
-                new_indiv = crossover(parents[0], parents[1]
+                new_indiv = crossover(parents[0], parents[1])
                 if np.random.uniform() < self._mutate_rate:
                     new_indiv = mutate(new_indiv)
                 new_gen.append(new_indiv)
@@ -100,7 +100,7 @@ class GeneticEnvironment(object):
             # cleanup
             curr_pop = new_gen[:]
         return curr_pop # end after given number of iterations
-
+    
     def _crossover(self, father, mother):
         children_method_seq = self._cut_and_splice_crossover(father.get_method_seq(), mother.get_method_seq())
         children_const_inputs = self._single_point_crossover(father.get_const_inputs(), mother.get_const_inputs())
