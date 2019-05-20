@@ -89,7 +89,7 @@ class GeneticEnvironment(object):
             # crossover (the paper isn't very clear here) & mutation
             new_gen = sel_indivs[:]
             while len(new_gen) < self._pop_size:
-                parents = np.random.choice(sel_indivs, size=2, replace=True)
+                parents = np.random.choice(sel_indivs, size=2, replace=False)
                 new_indiv = crossover(parents[0], parents[1]
                 if np.random.uniform() < self._mutate_rate:
                     new_indiv = mutate(new_indiv)
