@@ -4,7 +4,6 @@ class C():
 
     def f(self, a, b):
         if a == b:
-            print("equal")
             return a
         if a > b:
             return a
