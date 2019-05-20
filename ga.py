@@ -104,14 +104,17 @@ class GeneticEnvironment(object):
     def _crossover(self, father, mother):
         children_method_seq = self._cut_and_splice_crossover(father.get_method_seq(), mother.get_method_seq())
         children_const_inputs = self._single_point_crossover(father.get_const_inputs(), mother.get_const_inputs())
+        children_mut_inputs = self._single_point_crossover(father.get_mut_inputs(), mother.get_mut_inputs())
         
         child1 = copy.deepcopy(father)
         child1.set_method_seq(children_method_seq[0])
         child1.set_const_inputs(children_const_inputs[0])
+        child1.set_mut_inputs(children_mut_inputs[0])
         
         child2 = copy.deepcopy(mother)
         child2.set_method_seq(children_method_seq[1])
         child2.set_const_inputs(children_const_inputs[1])
+        child2.set_mut_inputs(children_mut_inputs[1])
         
         return (child1, child2)
     
@@ -129,8 +132,8 @@ class GeneticEnvironment(object):
         # for argument lists
         index = random.randint(1, min(len(father), len(mother)) - 1)
         
-        child1 = father[:index] + mother[index:]
-        child2 = mother[:index] + father[index:]
+        child1 = mother[:index] + father[index:]
+        child2 = father[:index] + mother[index:]
         
         return (child1, child2)
 
