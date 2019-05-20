@@ -35,12 +35,14 @@ class Individual(object):
 
     def exec(self):
         test_str = ''
+        test_str = 'from sut import *\n'  # TODO: correct module handling
         test_str += 'obj = %s(%s)\n' % (self._class_name, ', '.join(str(e.val()) for e in self._const_list))
         for mc in self._method_list:
             test_str += 'obj.%s(%s)\n' % (mc.method_name(), ', '.join(str(e.val()) for e in mc.inputs()))
         test_str += 'obj.%s(%s)' % (self._mut_name, ', '.join(str(e.val()) for e in self._mut_list))
 
         # add fitness func I guess
+        print(test_str)
         exec(test_str)
 
     def get_method_seq(self):
@@ -61,6 +63,7 @@ class Individual(object):
     def set_mut_inputs(self, new_inputs):
         self._mut_list = new_inputs[:]
 
-i = Individual('String', [ArgInput('int', 1)], [MethodCall('index', [ArgInput('str', "'1'")])], 'split', [])
-i.exec()
+if __name__ == "__main__":
+    i = Individual('String', [ArgInput('int', 1)], [MethodCall('index', [ArgInput('str', "'1'")])], 'split', [])
+    i.exec()
 
