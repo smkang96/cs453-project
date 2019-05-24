@@ -3,43 +3,11 @@
 import numpy as np # for sampling without replacement
 import random
 import copy
+import string
 
+from util import Analyzer, RandomTestGenerator
 '''Test Case Generator for Python'''
 
-class Analyzer(object):
-    class _FunctionInfo(object):
-        def __init__(self, name, arg_info):
-            self._name = name
-            self._arg_info = arg_info
-
-        def name(self):
-            return self._name
-
-        def arg_num(self):
-            return len(self._arg_info)
-
-    def __init__(self, class_name):
-        self._func_list = self.funcs_in_class(class_name)
-
-    def funcs_in_class(self, class_name):
-        '''returns the methods in the class, a list of _FuncInfo objs'''
-        raise NotImplementedError
-
-    def func_arg_num(self, func_name):
-        '''return function argument number given name'''
-        i = 0
-        while i != len(self._func_list):
-            obj = self._func_list[i]
-            if obj.name() == func_name:
-                break
-            i += 1
-        if i == len(self._func_list):
-            return -1
-        else:
-            return obj.arg_num()
-
-    def num_methods(self):
-        return len(self._func_list)
 
 class GeneticEnvironment(object):
     def __init__(self, cut_name, mut_name, 
@@ -86,7 +54,7 @@ class GeneticEnvironment(object):
             for individual in curr_pop:
                 indiv_score = individual.score()
                 curr_pop_score.append((individual, indiv_score))
-	    sel_indivs = self._tournament_sel(self._tournament_size)
+                sel_indivs = self._tournament_sel(self._tournament_size)
             
             # crossover (the paper isn't very clear here) & mutation
             new_gen = sel_indivs[:]
