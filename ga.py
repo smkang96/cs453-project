@@ -147,41 +147,36 @@ class GeneticEnvironment(object):
     def _make_method_mutation(self, parent):
         # for method call lists
         runprob = random.randint(0, 9)
-        if runprob < 2:
-	        #addorremove 0:add, 1:remove
-	        addorremove = random(randint(0, 1))
-	        if addorremove == 0:
-		        index = random.randint(0, len(parent) - 1)
-		        child = parent[:index] + parent[random.randint(0, len(parent) - 1)] + parent[index:]
-	        else:
-		        index = random.randint(0, len(parent) - 1)
-	        	child = parent[:index] + parent[(index+1):]
-	    else:
-	    	child = parent
+        addorremove = random(randint(0, 1))
+        if addorremove == 0:
+            index = random.randint(0, len(parent) - 1)
+            child = parent[:index] + parent[random.randint(0, len(parent) - 1)] + parent[index:]
+        else:
+            index = random.randint(0, len(parent) - 1)
+            child = parent[:index] + parent[(index+1):]
         return child
 
     def _make_input_mutation(self, parent):
         # for argument lists
         for i in in range(0, 10):
-        	index[i] = random.randint(1, len(parent) - 1)
-        	runprob = random.randint(0, 9)
-        	if runprob == 0:
-        		child = self._gen_type_pattern(parent, index[i])
-        	elif runprob == 1:
-        		child = self._prod_new_input(parent, index[i])
-
+            index[i] = random.randint(1, len(parent) - 1)
+            runprob = random.randint(0, 9)
+            if runprob == 0:
+                child = self._gen_type_pattern(parent, index[i])
+            elif runprob == 1:
+                child = self._prod_new_input(parent, index[i])
         return child
 
     def _gen_type_pattern(self, parent, index):
-    		child = parent
-    		child[i]._type = "int"
-    		child[i]._val = 0
-    	return child
+        child = parent
+        child[i]._type = "int"
+        child[i]._val = 0
+        return child
 
     def _prod_new_input(self, parent, index):
-    		if child[i]._type == "int":
-    			child[i]._val = random.randint(0,sys.maxsize)
-    	return child
+        if child[i]._type == "int":
+            child[i]._val = random.randint(0,sys.maxsize)
+        return child
 
 #ge = GeneticEnvironment('apple', 'pear')	
 #print(ge._tournament_sel(list((i, i) for i in range(50))))
