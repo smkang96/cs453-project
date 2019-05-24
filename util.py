@@ -41,7 +41,7 @@ class Analyzer(object):
 
 class RandomTestGenerator(object):
     '''provides random inputs for functions'''
-    def __init__(self, analyzer, mut_name, cut_name, str_max_len = 10, int_max_val = 100, 
+    def __init__(self, cut_name, mut_name, analyzer, str_max_len = 10, int_max_val = 100, 
                  float_max_val = 100., max_fseq_num = 5):
         self._analyzer = analyzer
         self._mut_name = mut_name
@@ -69,6 +69,15 @@ class RandomTestGenerator(object):
         rand_val = 2*self._float_max_val*random.random()-self._float_max_val
         return ArgInput('float', rand_val)
 
+    def type_same_new_val(self, input_node):
+        input_type = input_node.type()
+        if input_type == 'int':
+            return self._rand_int()
+        elif input_type == 'str':
+            return self._rand_str()
+        else:
+            return self._rand_float()
+
     def any_rand_input(self):
     	arg_type = random.randint(0, 2)
         if arg_type == 0:
@@ -77,6 +86,14 @@ class RandomTestGenerator(object):
             return self._rand_str()
         elif arg_type == 2:
             return self._rand_float()
+
+    def any_rand_call(self, all_funcs = None):
+        if all_funcs is None:
+            all_funcs = self._analyzer.funcs_in_class()
+        rand_func = random.choice(all_funcs)
+        rand_func_args = self.fill_args(rand_func.name())
+        return MethodCall(rand_func.name(), rand_func_args)
+
 
     def fill_args(self, func_name):
         num_args = self._analyzer.func_arg_num(func_name)
@@ -89,9 +106,8 @@ class RandomTestGenerator(object):
         func_calls = []
         all_funcs = self._analyzer.funcs_in_class()
         for i in range(self._max_fseq_num):
-            rand_func = random.choice(all_funcs)
-            rand_func_args = self.fill_args(rand_func.name())
-            func_calls.append(MethodCall(rand_func.name(), rand_func_args))
+            rand_func_call = self.any_rand_call(all_funcs)
+            func_calls.append(rand_func_call)
         return func_calls
 
     def make_individual(self):

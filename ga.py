@@ -23,6 +23,7 @@ class GeneticEnvironment(object):
         self._crossover_rate = crossover_rate
         self._fit_weight_param = fit_weight_param
         self._tournament_size = tournament_size
+        self._rtest_generator = RandomTestGenerator(cut_name, mut_name, self._analyzer)
 
     def _sample_init_pop(self):
         raise NotImplementedError
@@ -105,49 +106,39 @@ class GeneticEnvironment(object):
         
         return (child1, child2)
 
-    def _mutation(self, parent):
-        children_method_seq = self._make_method_mutation(parent.get_method_seq())
-        children_mut_inputs = self._make_input_mutation(parent.get_mut_inputs())
+    def _mutation(self, indiv):
+        children_const_inputs = self._make_input_mutation(indiv.get_const_inputs())
+        children_method_seq = self._make_method_mutation(indiv.get_method_seq())
+        children_mut_inputs = self._make_input_mutation(indiv.get_mut_inputs())
         
-        child = copy.deepcopy(parent)
-        child.set_method_seq(children_method_seq)
-        child.set_mut_inputs(children_mut_inputs)
+        indiv.set_const_inputs(children_const_inputs)
+        indiv.set_method_seq(children_method_seq)
+        indiv.set_mut_inputs(children_mut_inputs)
 
         return child
 
-    def _make_method_mutation(self, parent):
+    def _make_method_mutation(self, method_seq):
         # for method call lists
-        runprob = random.randint(0, 9)
         addorremove = random(randint(0, 1))
         if addorremove == 0:
-            index = random.randint(0, len(parent) - 1)
-            child = parent[:index] + parent[random.randint(0, len(parent) - 1)] + parent[index:]
+            index = random.randint(0, len(method_seq) - 1)
+            new_call = self._rtest_generator.any_rand_call()
+            child = method_seq[:index] + [new_call] + method_seq[index:]
         else:
-            index = random.randint(0, len(parent) - 1)
-            child = parent[:index] + parent[(index+1):]
+            index = random.randint(0, len(method_seq) - 1)
+            child = method_seq[:index] + method_seq[(index+1):]
         return child
 
-    def _make_input_mutation(self, parent):
+    def _make_input_mutation(self, arg_seq):
         # for argument lists
-        for i in in range(0, 10):
-            index[i] = random.randint(1, len(parent) - 1)
-            runprob = random.randint(0, 9)
-            if runprob == 0:
-                child = self._gen_type_pattern(parent, index[i])
-            elif runprob == 1:
-                child = self._prod_new_input(parent, index[i])
-        return child
-
-    def _gen_type_pattern(self, parent, index):
-        child = parent
-        child[i]._type = "int"
-        child[i]._val = 0
-        return child
-
-    def _prod_new_input(self, parent, index):
-        if child[i]._type == "int":
-            child[i]._val = random.randint(0,sys.maxsize)
-        return child
+        change_idx = random.randint(1, len(arg_seq) - 1)
+        runprob = random.randint(0, 1)
+        if runprob == 0:
+            child = self._rtest_generator.any_rand_input()
+        elif runprob == 1:
+            child = self._rtest_generator.type_same_new_val(arg_seq[change_idx])
+        arg_seq[change_idx] = child
+        return arg_seq
 
 #ge = GeneticEnvironment('apple', 'pear')	
 #print(ge._tournament_sel(list((i, i) for i in range(50))))
