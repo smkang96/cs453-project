@@ -69,19 +69,21 @@ class RandomTestGenerator(object):
         rand_val = 2*self._float_max_val*random.random()-self._float_max_val
         return ArgInput('float', rand_val)
 
+    def any_rand_input(self):
+    	arg_type = random.randint(0, 2)
+        if arg_type == 0:
+            return self._rand_int()
+        elif arg_type == 1:
+            return self._rand_str()
+        elif arg_type == 2:
+            return self._rand_float()
+
     def fill_args(self, func_name):
         num_args = self._analyzer.func_arg_num(func_name)
         arg_list = [None] * num_args
         for i in range(num_args):
-            arg_type = random.randint(0, 2)
-            if arg_type == 0:
-                arg_list[i] = self._rand_int()
-            elif arg_type == 1:
-                arg_list[i] = self._rand_str()
-            elif arg_type == 2:
-                arg_list[i] = self._rand_float()
-            else:
-                raise ValueError
+        	arg_list[i] = self.any_rand_input()
+        return arg_list
 
     def fill_method_seq(self):
         func_calls = []
@@ -91,7 +93,6 @@ class RandomTestGenerator(object):
             rand_func_args = self.fill_args(rand_func.name())
             func_calls.append(MethodCall(rand_func.name(), rand_func_args))
         return func_calls
-        return arg_list
 
     def make_individual(self):
     	class_name = self._cut_name

@@ -105,6 +105,50 @@ class GeneticEnvironment(object):
         
         return (child1, child2)
 
+    def _mutation(self, parent):
+        children_method_seq = self._make_method_mutation(parent.get_method_seq())
+        children_mut_inputs = self._make_input_mutation(parent.get_mut_inputs())
+        
+        child = copy.deepcopy(parent)
+        child.set_method_seq(children_method_seq)
+        child.set_mut_inputs(children_mut_inputs)
+
+        return child
+
+    def _make_method_mutation(self, parent):
+        # for method call lists
+        runprob = random.randint(0, 9)
+        addorremove = random(randint(0, 1))
+        if addorremove == 0:
+            index = random.randint(0, len(parent) - 1)
+            child = parent[:index] + parent[random.randint(0, len(parent) - 1)] + parent[index:]
+        else:
+            index = random.randint(0, len(parent) - 1)
+            child = parent[:index] + parent[(index+1):]
+        return child
+
+    def _make_input_mutation(self, parent):
+        # for argument lists
+        for i in in range(0, 10):
+            index[i] = random.randint(1, len(parent) - 1)
+            runprob = random.randint(0, 9)
+            if runprob == 0:
+                child = self._gen_type_pattern(parent, index[i])
+            elif runprob == 1:
+                child = self._prod_new_input(parent, index[i])
+        return child
+
+    def _gen_type_pattern(self, parent, index):
+        child = parent
+        child[i]._type = "int"
+        child[i]._val = 0
+        return child
+
+    def _prod_new_input(self, parent, index):
+        if child[i]._type == "int":
+            child[i]._val = random.randint(0,sys.maxsize)
+        return child
+
 #ge = GeneticEnvironment('apple', 'pear')	
 #print(ge._tournament_sel(list((i, i) for i in range(50))))
 
