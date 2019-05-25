@@ -26,24 +26,37 @@ class MethodCall(object):
         return self._inputs
 
 class Individual(object):
-    def __init__(self, class_name, const_list, method_list, mut_name, mut_list):
+    def __init__(self, file_name, class_name, const_list, method_list, mut_name, mut_list):
+        self._file_name = file_name   # abspath
         self._class_name = class_name # for constructor
         self._const_list = const_list
         self._method_list = method_list
         self._mut_name = mut_name
         self._mut_list = mut_list
 
-    def exec(self):
-        test_str = ''
-        test_str = 'from sut import *\n'  # TODO: correct module handling
-        test_str += 'obj = %s(%s)\n' % (self._class_name, ', '.join(str(e.val()) for e in self._const_list))
+    def file_name(self):
+        return self._file_name
+
+    def mut_name(self):
+        return self._mut_name
+
+    def run(self):
+        mod_name = self._file_name[:-3].split('/')[-1]
+        s = ''
+        s += f'''
+import importlib.util
+spec = importlib.util.spec_from_file_location('{mod_name}', '{self._file_name}')
+SUT = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(SUT)\n
+'''
+        s += 'obj = SUT.%s(%s)\n' % (self._class_name, ', '.join(str(e.val()) for e in self._const_list))
         for mc in self._method_list:
-            test_str += 'obj.%s(%s)\n' % (mc.method_name(), ', '.join(str(e.val()) for e in mc.inputs()))
-        test_str += 'obj.%s(%s)' % (self._mut_name, ', '.join(str(e.val()) for e in self._mut_list))
+            s += 'obj.%s(%s)\n' % (mc.method_name(), ', '.join(str(e.val()) for e in mc.inputs()))
+        s += 'obj.%s(%s)' % (self._mut_name, ', '.join(str(e.val()) for e in self._mut_list))
 
         # add fitness func I guess
-        print(test_str)
-        exec(test_str)
+        print(s)
+        exec(s)
 
     def get_method_seq(self):
         return self._method_list
@@ -65,5 +78,5 @@ class Individual(object):
 
 if __name__ == "__main__":
     i = Individual('String', [ArgInput('int', 1)], [MethodCall('index', [ArgInput('str', "'1'")])], 'split', [])
-    i.exec()
+    i.run()
 

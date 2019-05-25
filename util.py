@@ -1,49 +1,104 @@
-#!/usr/bin/python
+import ast
+import astor
 import random
 import string
+from os.path import abspath
+from typing import List, Tuple
 
 from individual import ArgInput, MethodCall, Individual
 
-class Analyzer(object):
-    class _FunctionInfo(object):
-        def __init__(self, name, arg_info):
-            self._name = name
-            self._arg_info = arg_info
+class ArgInfo():
+    def __init__(self, name):
+        self._name = name
+        # self._annot = annot  # type annotation
 
-        def name(self):
-            return self._name
+    def name(self):
+        return self._name
 
-        def arg_num(self):
-            return len(self._arg_info)
 
-    def __init__(self, class_name):
-        self._func_list = self.funcs_in_class(class_name)
+class FuncInfo(object):
+    def __init__(self, name, arg_infos, lines):
+        self._name: str = name
+        self._arg_info: List[ArgInfo] = arg_infos
+        # is this func def defined at top level
+        self._is_top = len(arg_infos) == 0 \
+                       or arg_infos[0].name() not in ['self', 'cls']
+        self._lines: Tuple[int,int] = lines
 
-    def funcs_in_class(self, class_name):
-        '''returns the methods in the class, a list of _FuncInfo objs'''
-        raise NotImplementedError
+    def name(self):
+        return self._name
 
-    def func_arg_num(self, func_name):
-        '''return function argument number given name'''
-        i = 0
-        while i != len(self._func_list):
-            obj = self._func_list[i]
-            if obj.name() == func_name:
-                break
-            i += 1
-        if i == len(self._func_list):
-            return -1
-        else:
-            return obj.arg_num()
+    # # of args excluding self or cls
+    def arg_num(self):
+        return len(self._arg_info) if self._is_top else len(self._arg_info) - 1
+
+    def lines(self):
+        return self._lines
+
+# TODO: per file? per class? ~> non-methods?
+# TODO: extend to full analyzer: args, types
+class Analyzer(ast.NodeVisitor):
+
+    def __init__(self, file_name, class_name=''):
+        self._file_name: str = abspath(file_name)
+        self._class_name: str = class_name
+        self._func_list: List[FuncInfo] = []
+
+        tree = astor.parse_file(self._file_name)
+        tree.parent = None
+        for node in ast.walk(tree):
+            for child in ast.iter_child_nodes(node):
+                child.parent = node
+        self.visit(tree)
+
+    def visit_ClassDef(self, c):
+        if c.name == self._class_name:
+            self.generic_visit(c)
+
+    def visit_FunctionDef(self, m: ast.FunctionDef):
+        # a function def is not necessarily a method def
+        # is method <-> self._class_name != ''
+        if isinstance(m.parent, ast.ClassDef) != (self._class_name != ''):
+            return
+
+        assert m.args.vararg is None
+        assert m.args.kwonlyargs == []
+        assert m.args.kw_defaults == []
+        assert m.args.kwarg is None
+        assert m.args.defaults == []
+
+        def endline(n):
+            if hasattr(n, 'finalbody'):
+                return endline(n.finalbody[-1])
+            if hasattr(n, 'orelse'):
+                return endline(n.orelse[-1])
+            if hasattr(n, 'body'):
+                return endline(n.body[-1])
+            return n.lineno
+        start = m.lineno
+        end = endline(m)
+        arg_infos = list(map(lambda arg: ArgInfo(arg.arg), m.args.args))
+        self._func_list.append(FuncInfo(m.name, arg_infos, (start, end)))
+
+    def funcs(self) -> List[FuncInfo]:
+        '''returns the methods in the class, a list of FuncInfo objs'''
+        return self._func_list
+
+    def func_info(self, func_name) -> FuncInfo:
+        for func in self._func_list:
+            if func.name() == func_name:
+                return func
+        assert False
 
     def num_methods(self):
         return len(self._func_list)
 
+
 class RandomTestGenerator(object):
     '''provides random inputs for functions'''
-    def __init__(self, cut_name, mut_name, analyzer, str_max_len = 10, int_max_val = 100, 
+    def __init__(self, cut_name, mut_name, analyzer, str_max_len = 10, int_max_val = 100,
                  float_max_val = 100., max_fseq_num = 5):
-        self._analyzer = analyzer
+        self._analyzer: Analyzer = analyzer
         self._mut_name = mut_name
         self._cut_name = cut_name
         self._str_max_len = str_max_len
@@ -79,7 +134,7 @@ class RandomTestGenerator(object):
             return self._rand_float()
 
     def any_rand_input(self):
-    	arg_type = random.randint(0, 2)
+        arg_type = random.randint(0, 2)
         if arg_type == 0:
             return self._rand_int()
         elif arg_type == 1:
@@ -89,31 +144,31 @@ class RandomTestGenerator(object):
 
     def any_rand_call(self, all_funcs = None):
         if all_funcs is None:
-            all_funcs = self._analyzer.funcs_in_class()
+            all_funcs = self._analyzer.funcs()
         rand_func = random.choice(all_funcs)
         rand_func_args = self.fill_args(rand_func.name())
         return MethodCall(rand_func.name(), rand_func_args)
 
 
     def fill_args(self, func_name):
-        num_args = self._analyzer.func_arg_num(func_name)
+        num_args = self._analyzer.func_info(func_name).arg_num()
         arg_list = [None] * num_args
         for i in range(num_args):
-        	arg_list[i] = self.any_rand_input()
+            arg_list[i] = self.any_rand_input()
         return arg_list
 
     def fill_method_seq(self):
         func_calls = []
-        all_funcs = self._analyzer.funcs_in_class()
+        all_funcs = self._analyzer.funcs()
         for i in range(self._max_fseq_num):
             rand_func_call = self.any_rand_call(all_funcs)
             func_calls.append(rand_func_call)
         return func_calls
 
     def make_individual(self):
-    	class_name = self._cut_name
-    	constructor_args = self.fill_args('__init__')
-    	method_calls = self.fill_method_seq()
-    	mut_name = self._mut_name
-    	mut_list = self.fill_args(mut_name)
-    	return Individual(class_name, constructor_args, method_calls, mut_name, mut_list)
+        class_name = self._cut_name
+        constructor_args = self.fill_args('__init__')
+        method_calls = self.fill_method_seq()
+        mut_name = self._mut_name
+        mut_list = self.fill_args(mut_name)
+        return Individual(class_name, constructor_args, method_calls, mut_name, mut_list)
