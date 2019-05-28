@@ -65,12 +65,12 @@ class Analyzer(ast.NodeVisitor):
         assert m.args.kwonlyargs == []
         assert m.args.kw_defaults == []
         assert m.args.kwarg is None
-        assert m.args.defaults == []
+        # assert m.args.defaults == []
 
         def endline(n):
-            if hasattr(n, 'finalbody'):
+            if hasattr(n, 'finalbody') and len(n.finalbody) > 0:
                 return endline(n.finalbody[-1])
-            if hasattr(n, 'orelse'):
+            if hasattr(n, 'orelse') and len(n.orelse) > 0:
                 return endline(n.orelse[-1])
             if hasattr(n, 'body'):
                 return endline(n.body[-1])
@@ -96,11 +96,13 @@ class Analyzer(ast.NodeVisitor):
 
 class RandomTestGenerator(object):
     '''provides random inputs for functions'''
-    def __init__(self, cut_name, mut_name, analyzer, str_max_len = 10, int_max_val = 100,
+    def __init__(self, file_name, cut_name, mut_name, analyzer, mod_name = None, str_max_len = 10, int_max_val = 100,
                  float_max_val = 100., max_fseq_num = 5):
         self._analyzer: Analyzer = analyzer
+        self._file_name = abspath(file_name)
         self._mut_name = mut_name
         self._cut_name = cut_name
+        self._mod_name = mod_name
         self._str_max_len = str_max_len
         self._int_max_val = int_max_val
         self._float_max_val = float_max_val
@@ -118,7 +120,7 @@ class RandomTestGenerator(object):
         for c_idx in range(rand_str_len):
             rand_idx = random.randint(0, ingredient_num-1)
             ret_str += ingredient_str[rand_idx]
-        return ArgInput('str', ret_str)
+        return ArgInput('str', '"' + ret_str + '"')
 
     def _rand_float(self):
         rand_val = 2*self._float_max_val*random.random()-self._float_max_val
@@ -167,8 +169,10 @@ class RandomTestGenerator(object):
 
     def make_individual(self):
         class_name = self._cut_name
-        constructor_args = self.fill_args('__init__')
+        constructor_args = self.fill_args('__init__') if class_name else []
         method_calls = self.fill_method_seq()
         mut_name = self._mut_name
         mut_list = self.fill_args(mut_name)
-        return Individual(class_name, constructor_args, method_calls, mut_name, mut_list)
+        file_name = self._file_name
+        mod_name = self._mod_name
+        return Individual(file_name, class_name, constructor_args, method_calls, mut_name, mut_list, mod_name)

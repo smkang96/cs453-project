@@ -9,23 +9,25 @@ from util import Analyzer, RandomTestGenerator
 
 
 class GeneticEnvironment(object):
-    def __init__(self, f_name, cut_name, mut_name,
+    def __init__(self, f_name, cut_name, mut_name, mod_name,
                  gen_num = 50, pop_size = 50, mutate_rate = 0.2,
                  crossover_rate = 1.0, fit_weight_param = 0.5,
                  tournament_size = 4):
         self._cut_name = cut_name
         self._analyzer = Analyzer(f_name, cut_name)
         self._mut_name = mut_name
+        self._mod_name = mod_name
         self._gen_num = gen_num
         self._pop_size = pop_size
         self._mutate_rate = mutate_rate
         self._crossover_rate = crossover_rate
         self._fit_weight_param = fit_weight_param
         self._tournament_size = tournament_size
-        self._rtest_generator = RandomTestGenerator(cut_name, mut_name, self._analyzer)
+        self._rtest_generator = RandomTestGenerator(f_name, cut_name, mut_name, self._analyzer, mod_name)
 
     def _sample_init_pop(self):
-        raise NotImplementedError
+        # raise NotImplementedError
+        return [self._rtest_generator.make_individual() for _ in range(self._pop_size)]
 
     def _tournament_sel(self, indiv_list, rep=False):
         chosens = []
@@ -47,26 +49,31 @@ class GeneticEnvironment(object):
         '''returns best individuals'''
         init_pop = self._sample_init_pop()
         curr_pop = init_pop
+        max_indiv_score = 0
+
         for gen_idx in range(self._gen_num):
             curr_pop_score = []
 
             # evaluate individuals
             for individual in curr_pop:
                 indiv_score = self.evaluate(individual)
+                max_indiv_score = indiv_score if indiv_score > max_indiv_score else max_indiv_score
                 curr_pop_score.append((individual, indiv_score))
-                sel_indivs = self._tournament_sel(self._tournament_size)
+                sel_indivs = self._tournament_sel(curr_pop_score)
 
             # crossover (the paper isn't very clear here) & mutation
             new_gen = sel_indivs[:]
             while len(new_gen) < self._pop_size:
                 parents = np.random.choice(sel_indivs, size=2, replace=False)
                 new_indiv = self._crossover(parents[0], parents[1])
-                if np.random.uniform() < self._mutate_rate:
-                    new_indiv = mutate(new_indiv)
-                new_gen.append(new_indiv)
+                for indiv in new_indiv :
+                    if np.random.uniform() < self._mutate_rate:
+                        indiv = self._mutation(indiv)
+                    new_gen.append(indiv)
 
             # cleanup
             curr_pop = new_gen[:]
+        print('max individual score :', max_indiv_score)
         return curr_pop # end after given number of iterations
 
     def evaluate(self, ind) -> float:
@@ -108,8 +115,8 @@ class GeneticEnvironment(object):
 
     def _cut_and_splice_crossover(self, father, mother):
         # for method call lists
-        index1 = random.randint(1, len(father) - 1)
-        index2 = random.randint(1, len(mother) - 1)
+        index1 = random.randint(0, len(father) )
+        index2 = random.randint(0, len(mother) )
 
         child1 = father[:index1] + mother[index2:]
         child2 = mother[:index2] + father[index1:]
@@ -118,7 +125,7 @@ class GeneticEnvironment(object):
 
     def _single_point_crossover(self, father, mother):
         # for argument lists
-        index = random.randint(1, min(len(father), len(mother)) - 1)
+        index = random.randint(0, min(len(father), len(mother)) )
 
         child1 = mother[:index] + father[index:]
         child2 = father[:index] + mother[index:]
@@ -126,15 +133,18 @@ class GeneticEnvironment(object):
         return (child1, child2)
 
     def _mutation(self, indiv):
-        children_const_inputs = self._make_input_mutation(indiv.get_const_inputs())
-        children_method_seq = self._make_method_mutation(indiv.get_method_seq())
-        children_mut_inputs = self._make_input_mutation(indiv.get_mut_inputs())
+        if indiv.get_const_inputs() :
+            children_const_inputs = self._make_input_mutation(indiv.get_const_inputs())
+            indiv.set_const_inputs(children_const_inputs)
 
-        indiv.set_const_inputs(children_const_inputs)
-        indiv.set_method_seq(children_method_seq)
+        if indiv.get_method_seq() :
+            children_method_seq = self._make_method_mutation(indiv.get_method_seq())
+            indiv.set_method_seq(children_method_seq)
+
+        children_mut_inputs = self._make_input_mutation(indiv.get_mut_inputs())
         indiv.set_mut_inputs(children_mut_inputs)
 
-        return child
+        return indiv
 
     def _make_method_mutation(self, method_seq):
         # for method call lists
@@ -150,7 +160,7 @@ class GeneticEnvironment(object):
 
     def _make_input_mutation(self, arg_seq):
         # for argument lists
-        change_idx = random.randint(1, len(arg_seq) - 1)
+        change_idx = random.randint(0, len(arg_seq) - 1)
         runprob = random.randint(0, 1)
         if runprob == 0:
             child = self._rtest_generator.any_rand_input()

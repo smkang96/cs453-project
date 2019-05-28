@@ -26,13 +26,14 @@ class MethodCall(object):
         return self._inputs
 
 class Individual(object):
-    def __init__(self, file_name, class_name, const_list, method_list, mut_name, mut_list):
+    def __init__(self, file_name, class_name, const_list, method_list, mut_name, mut_list, mod_name):
         self._file_name = file_name   # abspath
         self._class_name = class_name # for constructor
         self._const_list = const_list
         self._method_list = method_list
         self._mut_name = mut_name
         self._mut_list = mut_list
+        self._mod_name = mod_name
 
     def file_name(self):
         return self._file_name
@@ -43,20 +44,34 @@ class Individual(object):
     def run(self):
         mod_name = self._file_name[:-3].split('/')[-1]
         s = ''
-        s += f'''
+
+        if self._class_name :
+            s += f'''
 import importlib.util
 spec = importlib.util.spec_from_file_location('{mod_name}', '{self._file_name}')
 SUT = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(SUT)\n
 '''
-        s += 'obj = SUT.%s(%s)\n' % (self._class_name, ', '.join(str(e.val()) for e in self._const_list))
-        for mc in self._method_list:
-            s += 'obj.%s(%s)\n' % (mc.method_name(), ', '.join(str(e.val()) for e in mc.inputs()))
-        s += 'obj.%s(%s)' % (self._mut_name, ', '.join(str(e.val()) for e in self._mut_list))
+            s += 'obj = SUT.%s(%s)\n' % (self._class_name, ', '.join(str(e.val()) for e in self._const_list))
+            for mc in self._method_list:
+                s += 'obj.%s(%s)\n' % (mc.method_name(), ', '.join(str(e.val()) for e in mc.inputs()))
+            s += 'obj.%s(%s)' % (self._mut_name, ', '.join(str(e.val()) for e in self._mut_list))
+
+        elif self._mod_name and not self._class_name :
+            s += 'import %s\n' % (self._mod_name)
+            for mc in self._method_list:
+                s += '%s.%s(%s)\n' % (self._mod_name, mc.method_name(), ', '.join(str(e.val()) for e in mc.inputs()))
+            s += '%s.%s(%s)' % (self._mod_name, self._mut_name, ', '.join(str(e.val()) for e in self._mut_list))
+
+        elif self._mod_name and self._class_name :
+            pass
 
         # add fitness func I guess
         print(s)
-        exec(s)
+        try:
+            exec(s)
+        except:
+            pass
 
     def get_method_seq(self):
         return self._method_list
