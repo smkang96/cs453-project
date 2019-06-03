@@ -23,6 +23,12 @@ if test_candidate == 'sut' :
     cname = 'C'
     mutname = 'f' 
 
+if test_candidate == 'triangle' :
+    fname = abspath('triangle.py')
+    modname = ''
+    cname = 'Triangle'
+    mutname = 'testTriangle'
+
 analyzer = Analyzer(fname, cname)
 ge = GeneticEnvironment(fname, cname, mutname, modname)
 ge.evolve()
