@@ -67,11 +67,12 @@ spec.loader.exec_module(SUT)\n
             pass
 
         # add fitness func I guess
-        print(s)
+        # print(s)
         try:
             exec(s)
         except:
             pass
+        return s
 
     def get_method_seq(self):
         return self._method_list

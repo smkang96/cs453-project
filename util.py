@@ -162,7 +162,8 @@ class RandomTestGenerator(object):
     def fill_method_seq(self):
         func_calls = []
         all_funcs = self._analyzer.funcs()
-        for i in range(self._max_fseq_num):
+        num_calls = random.randint(0, self._max_fseq_num)
+        for i in range(num_calls):
             rand_func_call = self.any_rand_call(all_funcs)
             func_calls.append(rand_func_call)
         return func_calls
