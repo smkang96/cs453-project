@@ -59,7 +59,7 @@ class GeneticEnvironment(object):
                 indiv_score = self.evaluate(individual)
                 max_indiv_score = indiv_score if indiv_score > max_indiv_score else max_indiv_score
                 curr_pop_score.append((individual, indiv_score))
-                sel_indivs = self._tournament_sel(curr_pop_score)
+            sel_indivs = self._tournament_sel(curr_pop_score)
 
             # crossover (the paper isn't very clear here) & mutation
             new_gen = sel_indivs[:]

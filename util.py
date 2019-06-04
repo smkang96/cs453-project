@@ -113,7 +113,7 @@ class RandomTestGenerator(object):
         return ArgInput('int', rand_val)
 
     def _rand_str(self):
-        ingredient_str = string.printable[:-3]
+        ingredient_str = string.digits + string.ascii_letters
         ingredient_num = len(ingredient_str)
         rand_str_len = random.randint(1, self._str_max_len)
         ret_str = ''
