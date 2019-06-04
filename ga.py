@@ -74,7 +74,7 @@ class GeneticEnvironment(object):
             # cleanup
             curr_pop = new_gen[:]
         print('max individual score :', max_indiv_score)
-        return curr_pop # end after given number of iterations
+        return curr_pop, max_indiv_score # end after given number of iterations
 
     def evaluate(self, ind) -> float:
         # monitor coverage and run each individual

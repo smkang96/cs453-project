@@ -63,7 +63,7 @@ spec.loader.exec_module(SUT)\n
             s += 'SUT.%s(%s)' % (self._mut_name, ', '.join(str(e.val()) for e in self._mut_list))
 
         # add fitness func I guess
-        print(s)
+        # print(s)
         try:
             exec(s)
         except:

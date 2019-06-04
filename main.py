@@ -1,4 +1,5 @@
 import argparse
+import numpy as np
 
 from individual import *
 from util import *
@@ -45,9 +46,15 @@ def main(parser):
     mutname = parser.mut_name
     gen_num = parser.gen_num
     pop_size = parser.pop_size
+    rep_num = parser.repeat_num
 
     ge = GeneticEnvironment(fname, cname, mutname, modname, gen_num, pop_size)
-    result = ge.evolve()
+    max_vals = []
+    for i in range(rep_num):
+        print('%d th try' % (i+1))
+        _, max_val = ge.evolve()
+    print('Final result mean: %.3f' % np.mean(max_vals))
+    print('final result std: %.3f' % np.std(max_vals))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate Test Data.')
@@ -62,5 +69,7 @@ if __name__ == '__main__':
                         type=int, default=50)
     parser.add_argument('--pop_size', help='population size',
                         type=int, default=50)
+    parser.add_argument('--repeat_num', help='times to repeat experiment',
+                        type=int, default=30)
     parser = parser.parse_args()
     main(parser)
