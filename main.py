@@ -53,7 +53,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate Test Data.')
     parser.add_argument('--class_file', help='file containing class under test',
                         type=str)
-    parser.add_argument('--class_name', help='name of class under test',
+    parser.add_argument('--class_name', help='name of class under test', default='',
                         type=str)
     parser.add_argument('--mod_name', type=str)
     parser.add_argument('--mut_name', help='name of method under test',
