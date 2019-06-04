@@ -31,8 +31,10 @@ def main(parser):
     modname = parser.mod_name
     cname = parser.class_name
     mutname = parser.mut_name
+    gen_num = parser.gen_nmum
+    pop_size = parser.pop_size
 
-    ge = GeneticEnvironment(fname, cname, mutname, modname)
+    ge = GeneticEnvironment(fname, cname, mutname, modname, gen_num, pop_size)
     ge.evolve()
 
 if __name__ == '__main__':
@@ -44,5 +46,9 @@ if __name__ == '__main__':
     parser.add_argument('--mod_name', type=str)
     parser.add_argument('--mut_name', help='name of method under test',
                         type=str)
+    parser.add_argument('--gen_num', help='number of generations (0 random)',
+                        type=int, default=50)
+    parser.add_argument('--pop_size', help='population size',
+                        type=int, default=50)
     parser = parser.parse_args()
     main(parser)
