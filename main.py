@@ -7,7 +7,7 @@ from ga import *
 
 '''
 if test_candidate == 'isbn-validate' :
-    fname = abspath('venv/lib/python3.7/site-packages/stdnum/isbn.py')
+    fname = abspath('venv/lib/python3.6/site-packages/stdnum/isbn.py')
     modname = 'stdnum.isbn' # for external library module
     cname = ''
     mutname = 'validate'
@@ -16,7 +16,19 @@ if test_candidate == 'sut' :
     fname = abspath('sut.py')
     modname = ''
     cname = 'C'
-    mutname = 'f' 
+    mutname = 'f'
+
+if test_candidate == 'rbtree':
+    fname = abspath('suts/Red-Black-Tree/rb_tree.py')
+    modname = ''
+    cname = 'RedBlackTree'
+    mutname = 'remove'
+
+if test_candidate == 'unionfind':
+    fname = abspath('suts/unionfind.py')
+    modname = ''
+    cname = 'UnionFind'
+    mutname = 'union'
 
 if test_candidate == 'triangle' :
     fname = abspath('triangle.py')
@@ -33,7 +45,7 @@ def main(parser):
     mutname = parser.mut_name
 
     ge = GeneticEnvironment(fname, cname, mutname, modname)
-    ge.evolve()
+    result = ge.evolve()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate Test Data.')
