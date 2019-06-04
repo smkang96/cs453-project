@@ -11,7 +11,9 @@ class Board(object):
     position is stored as a list of single-character strings.
     """
 
-    def __init__(self, position=' ' * 64):
+    def __init__(self):
+        position=' ' * 64
+
         self._position = []
         self.set_position(position)
 
