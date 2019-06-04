@@ -44,30 +44,26 @@ class Individual(object):
     def run(self):
         mod_name = self._file_name[:-3].split('/')[-1]
         s = ''
-
-        if self._class_name :
-            s += f'''
+        s += f'''
 import importlib.util
 spec = importlib.util.spec_from_file_location('{mod_name}', '{self._file_name}')
 SUT = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(SUT)\n
 '''
+
+        if self._class_name :
             s += 'obj = SUT.%s(%s)\n' % (self._class_name, ', '.join(str(e.val()) for e in self._const_list))
             for mc in self._method_list:
                 s += 'obj.%s(%s)\n' % (mc.method_name(), ', '.join(str(e.val()) for e in mc.inputs()))
             s += 'obj.%s(%s)' % (self._mut_name, ', '.join(str(e.val()) for e in self._mut_list))
 
-        elif self._mod_name and not self._class_name :
-            s += 'import %s\n' % (self._mod_name)
+        else:
             for mc in self._method_list:
-                s += '%s.%s(%s)\n' % (self._mod_name, mc.method_name(), ', '.join(str(e.val()) for e in mc.inputs()))
-            s += '%s.%s(%s)' % (self._mod_name, self._mut_name, ', '.join(str(e.val()) for e in self._mut_list))
-
-        elif self._mod_name and self._class_name :
-            pass
+                s += 'SUT.%s(%s)\n' % (mc.method_name(), ', '.join(str(e.val()) for e in mc.inputs()))
+            s += 'SUT.%s(%s)' % (self._mut_name, ', '.join(str(e.val()) for e in self._mut_list))
 
         # add fitness func I guess
-        # print(s)
+        print(s)
         try:
             exec(s)
         except:
