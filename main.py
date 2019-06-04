@@ -31,7 +31,7 @@ def main(parser):
     modname = parser.mod_name
     cname = parser.class_name
     mutname = parser.mut_name
-    gen_num = parser.gen_nmum
+    gen_num = parser.gen_num
     pop_size = parser.pop_size
 
     ge = GeneticEnvironment(fname, cname, mutname, modname, gen_num, pop_size)
