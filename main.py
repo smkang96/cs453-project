@@ -53,6 +53,7 @@ def main(parser):
     for i in range(rep_num):
         print('%d th try' % (i+1))
         _, max_val = ge.evolve()
+        max_vals.append(max_val)
     print('Final result mean: %.3f' % np.mean(max_vals))
     print('final result std: %.3f' % np.std(max_vals))
 
