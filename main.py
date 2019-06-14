@@ -39,24 +39,6 @@ if test_candidate == 'triangle' :
 
 '''
 
-def main(parser):
-    fname = abspath(parser.class_file)
-    modname = parser.mod_name
-    cname = parser.class_name
-    mutname = parser.mut_name
-    gen_num = parser.gen_num
-    pop_size = parser.pop_size
-    rep_num = parser.repeat_num
-
-    ge = GeneticEnvironment(fname, cname, mutname, modname, gen_num, pop_size)
-    max_vals = []
-    for i in range(rep_num):
-        print('%d th try' % (i+1))
-        _, max_val = ge.evolve()
-        max_vals.append(max_val)
-    print('Final result mean: %.3f' % np.mean(max_vals))
-    print('final result std: %.3f' % np.std(max_vals))
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Generate Test Data.')
     parser.add_argument('--class_file', help='file containing class under test',
@@ -73,4 +55,23 @@ if __name__ == '__main__':
     parser.add_argument('--repeat_num', help='times to repeat experiment',
                         type=int, default=30)
     parser = parser.parse_args()
-    main(parser)
+
+    fname = abspath(parser.class_file)
+    modname = parser.mod_name
+    cname = parser.class_name
+    mutname = parser.mut_name
+    gen_num = parser.gen_num
+    pop_size = parser.pop_size
+    rep_num = parser.repeat_num
+    suite = []
+
+    ge = GeneticEnvironment(fname, cname, mutname, modname, gen_num, pop_size)
+    max_vals = []
+    for i in range(rep_num):
+        print('%d th try' % (i+1))
+        _, max_val, inds = ge.evolve()
+        max_vals.append(max_val)
+        suite.append(inds)
+
+    print('Final result mean: %.3f' % np.mean(max_vals))
+    print('final result std: %.3f' % np.std(max_vals))

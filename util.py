@@ -107,6 +107,15 @@ class RandomTestGenerator(object):
         self._int_max_val = int_max_val
         self._float_max_val = float_max_val
         self._max_fseq_num = max_fseq_num
+        # arg type combination that led to TypeError or AttributeError
+        self._err_comb = {} # func_name |-> Set[List[Type]]
+
+    # TODO: implement.
+    def add_err_comb(self, func_name, type_comb):
+        pass
+
+    # TODO: remember the stuff generated so far, and occasionally return them instead of another random value
+    # TODO: when generating args for method call, check if they are in err_comb
 
     def _rand_int(self):
         rand_val = random.randint(-self._int_max_val, self._int_max_val)

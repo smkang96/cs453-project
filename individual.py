@@ -1,4 +1,6 @@
 '''Implementation of individual class'''
+import traceback as tb
+import sys
 
 class String(str):
     pass
@@ -41,16 +43,15 @@ class Individual(object):
     def mut_name(self):
         return self._mut_name
 
-    def run(self):
+    def code(self):
         mod_name = self._file_name[:-3].split('/')[-1]
-        s = ''
-        s += f'''
+        prefix = f'''
 import importlib.util
 spec = importlib.util.spec_from_file_location('{mod_name}', '{self._file_name}')
 SUT = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(SUT)\n
 '''
-
+        s = ''
         if self._class_name :
             s += 'obj = SUT.%s(%s)\n' % (self._class_name, ', '.join(str(e.val()) for e in self._const_list))
             for mc in self._method_list:
@@ -62,13 +63,10 @@ spec.loader.exec_module(SUT)\n
                 s += 'SUT.%s(%s)\n' % (mc.method_name(), ', '.join(str(e.val()) for e in mc.inputs()))
             s += 'SUT.%s(%s)' % (self._mut_name, ', '.join(str(e.val()) for e in self._mut_list))
 
-        # add fitness func I guess
-        # print(s)
-        try:
-            exec(s)
-        except:
-            pass
-        return s
+        return prefix + s
+
+    def run(self):
+        exec(self.code())
 
     def get_method_seq(self):
         return self._method_list

@@ -3,6 +3,8 @@ import random
 import copy
 import string
 import coverage
+import traceback as tb
+import sys
 
 from util import Analyzer, RandomTestGenerator
 '''Test Case Generator for Python'''
@@ -47,34 +49,69 @@ class GeneticEnvironment(object):
 
     def evolve(self):
         '''returns best individuals'''
-        init_pop = self._sample_init_pop()
-        curr_pop = init_pop
-        max_indiv_score = 0
+        while True:
+            init_pop = self._sample_init_pop()
+            curr_pop = init_pop
+            max_indiv_score = 0
+            restart = False
+            print("start")
 
-        for gen_idx in range(self._gen_num):
-            curr_pop_score = []
+            for gen_idx in range(self._gen_num):
+                curr_pop_score = []
 
-            # evaluate individuals
-            for individual in curr_pop:
-                indiv_score = self.evaluate(individual)
-                max_indiv_score = indiv_score if indiv_score > max_indiv_score else max_indiv_score
-                curr_pop_score.append((individual, indiv_score))
-            sel_indivs = self._tournament_sel(curr_pop_score)
+                # evaluate individuals
+                for individual in curr_pop:
+                    try:
+                        indiv_score = self.evaluate(individual)
+                    except (TypeError, AttributeError) as e:
+                        exc_type, exc_value, exc_traceback = sys.exc_info()
+                        print(exc_type, exc_value)
+                        tb.print_tb(exc_traceback)
+                        # print(repr(tb.extract_tb(exc_traceback)[1].name))
+                        stack = tb.extract_tb(exc_traceback)
+                        err_fn = stack[-1].name
+                        lineno = stack[-2].lineno
+                        # TODO: analyze lineno to figure out what method call caused the error
+                        print(err_fn, lineno)
+                        self._rtest_generator.add_err_comb(err_fn, None)
+                        restart = True
+                        indiv_score = -1
+                        raise
+                    except IndexError:
+                        indiv_score = 0
 
-            # crossover (the paper isn't very clear here) & mutation
-            new_gen = sel_indivs[:]
-            while len(new_gen) < self._pop_size:
-                parents = np.random.choice(sel_indivs, size=2, replace=False)
-                new_indiv = self._crossover(parents[0], parents[1])
-                for indiv in new_indiv :
-                    if np.random.uniform() < self._mutate_rate:
-                        indiv = self._mutation(indiv)
-                    new_gen.append(indiv)
+                    max_indiv_score = indiv_score if indiv_score > max_indiv_score else max_indiv_score
+                    # TODO: don't add obviously useless individuals with negative score.
+                    if indiv_score >= 0:
+                        curr_pop_score.append((individual, indiv_score))
 
-            # cleanup
-            curr_pop = new_gen[:]
-        print('max individual score :', max_indiv_score)
-        return curr_pop, max_indiv_score # end after given number of iterations
+                print(gen_idx, len(curr_pop_score))
+                # TODO: if too many useless individuals, just restart
+                restart |= len(curr_pop_score) < 6
+                if restart:
+                    print("restart")
+                    break
+
+                sel_indivs = self._tournament_sel(curr_pop_score)
+
+                # crossover (the paper isn't very clear here) & mutation
+                new_gen = sel_indivs[:]
+                while len(new_gen) < self._pop_size:
+                    parents = np.random.choice(sel_indivs, size=2, replace=False)
+                    new_indiv = self._crossover(parents[0], parents[1])
+                    for indiv in new_indiv :
+                        if np.random.uniform() < self._mutate_rate:
+                            indiv = self._mutation(indiv)
+                        new_gen.append(indiv)
+
+                # cleanup
+                curr_pop = new_gen[:]
+
+            if restart:
+                continue
+
+            print('max individual score :', max_indiv_score)
+            return curr_pop, max_indiv_score, curr_pop[:]
 
     def evaluate(self, ind) -> float:
         # monitor coverage and run each individual
