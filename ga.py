@@ -55,7 +55,6 @@ class GeneticEnvironment(object):
             curr_pop = init_pop
             max_indiv_score = 0
             restart = False
-            print("start")
 
             for gen_idx in range(self._gen_num):
                 curr_pop_score = []
@@ -66,31 +65,26 @@ class GeneticEnvironment(object):
                         indiv_score = self.evaluate(individual)
                     except (TypeError, AttributeError) as e:
                         exc_type, exc_value, exc_traceback = sys.exc_info()
-                        #  print(exc_type, exc_value)
-                        #  tb.print_tb(exc_traceback)
-                        # print(repr(tb.extract_tb(exc_traceback)[1].name))
                         stack = tb.extract_tb(exc_traceback)
-                        err_fn = stack[-1].name
-                        lineno = stack[-2].lineno
-                        # TODO: analyze lineno to figure out what method call caused the error
-                        #  print(exc_value)
                         err_call = individual.analyze_err(stack)
                         self._rtest_generator.add_err_comb(err_call)
+                        # TypeError -> restart
                         restart = True
-                        indiv_score = -1
+                        break
                     except IndexError:
                         indiv_score = 0
 
                     max_indiv_score = indiv_score if indiv_score > max_indiv_score else max_indiv_score
                     # TODO: don't add obviously useless individuals with negative score.
+                    # TODO: currently this doesn't do something meaningful
                     if indiv_score >= 0:
                         curr_pop_score.append((individual, indiv_score))
 
-                print(gen_idx, len(curr_pop_score))
+                print("gen_idx: ", gen_idx, "# curr_pop", len(curr_pop_score))
                 # TODO: if too many useless individuals, just restart
                 restart |= len(curr_pop_score) < 6
                 if restart:
-                    print("restart")
+                    print('restart at', gen_idx)
                     break
 
                 sel_indivs = self._tournament_sel(curr_pop_score)
@@ -198,19 +192,21 @@ class GeneticEnvironment(object):
 
     def _make_input_mutation(self, func_name: str, arg_seq: List[ArgInput]):
         # for argument lists
+        mutated = arg_seq[:]
         while True:
+            mutated = arg_seq[:]
             change_idx = random.randint(0, len(arg_seq) - 1)
             runprob = random.randint(0, 1)
             if runprob == 0:
                 child = self._rtest_generator.any_rand_input()
-                arg_seq[change_idx] = child
-                if not self._rtest_generator.is_err_comb(func_name, arg_seq):
+                mutated[change_idx] = child
+                if not self._rtest_generator.is_err_comb(func_name, mutated):
                     break
             else:
-                child = self._rtest_generator.same_type_new_val(arg_seq[change_idx])
-                arg_seq[change_idx] = child
+                child = self._rtest_generator.same_type_new_val(mutated[change_idx])
+                mutated[change_idx] = child
                 break
-        return arg_seq
+        return mutated
 
 #ge = GeneticEnvironment('apple', 'pear')
 #print(ge._tournament_sel(list((i, i) for i in range(50))))

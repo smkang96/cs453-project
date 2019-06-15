@@ -125,7 +125,6 @@ class RandomTestGenerator(object):
 
     def add_err_comb(self, call: MethodCall):
         self._err_comb[call.method_name()].add(to_type_comb(call.inputs()))
-        # print("add", call.method_name(), to_type_comb(call.inputs()))
 
     def is_err_comb(self, func_name, inputs: List[ArgInput]):
         return to_type_comb(inputs) in self._err_comb[func_name]
@@ -183,10 +182,8 @@ class RandomTestGenerator(object):
             arg_list = []
             for _ in range(num_args):
                 arg_list.append(self.any_rand_input())
-            if to_type_comb(arg_list) in self._err_comb[func_name]:
-                #  print(func_name, to_type_comb(arg_list), "not allowed")
-                continue
-            break
+            if not self.is_err_comb(func_name, arg_list):
+                break
         return arg_list
 
     def fill_method_seq(self):
