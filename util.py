@@ -129,9 +129,7 @@ class RandomTestGenerator(object):
     def is_err_comb(self, func_name, inputs: List[ArgInput]):
         return to_type_comb(inputs) in self._err_comb[func_name]
 
-
     # TODO: remember the stuff generated so far, and occasionally return them instead of another random value
-    # TODO: when generating args for method call, check if they are in err_comb
 
     def _rand_int(self):
         rand_val = random.randint(-self._int_max_val, self._int_max_val)

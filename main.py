@@ -69,7 +69,7 @@ if __name__ == '__main__':
     max_vals = []
     for i in range(rep_num):
         print('%d th try' % (i+1))
-        _, max_val, inds = ge.evolve()
+        inds, max_val = ge.evolve()
         max_vals.append(max_val)
         suite.append(inds)
 

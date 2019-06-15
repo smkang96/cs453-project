@@ -3,6 +3,7 @@ from typing import List
 import traceback as tb
 import sys
 
+
 class String(str):
     pass
 
@@ -98,6 +99,15 @@ spec.loader.exec_module(SUT)\n
             return MethodCall(self._mut_name, self._mut_list)
         assert False
 
+    # ((func_name, (type name, ...)), ...)
+    def to_comb(self):
+        call_seq = []
+        call_seq.append(('__init__', to_type_comb(self._const_list)))
+        for m in self._method_list:
+            call_seq.append((m.method_name(), to_type_comb(m.inputs())))
+        call_seq.append((self._mut_name, to_type_comb(self._mut_list)))
+        return tuple(call_seq)
+
     def get_method_seq(self):
         return self._method_list
 
@@ -116,7 +126,11 @@ spec.loader.exec_module(SUT)\n
     def set_mut_inputs(self, new_inputs):
         self._mut_list = new_inputs[:]
 
+def to_type_comb(inputs: List[ArgInput]):
+    return tuple(map(lambda x: x.type(), inputs))
+
 if __name__ == "__main__":
     i = Individual('String', [ArgInput('int', 1)], [MethodCall('index', [ArgInput('str', "'1'")])], 'split', [])
     i.run()
+
 
