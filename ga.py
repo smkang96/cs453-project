@@ -6,7 +6,8 @@ import coverage
 import traceback as tb
 import sys
 
-from util import Analyzer, RandomTestGenerator
+from individual import *
+from util import *
 '''Test Case Generator for Python'''
 
 
@@ -65,18 +66,18 @@ class GeneticEnvironment(object):
                         indiv_score = self.evaluate(individual)
                     except (TypeError, AttributeError) as e:
                         exc_type, exc_value, exc_traceback = sys.exc_info()
-                        print(exc_type, exc_value)
-                        tb.print_tb(exc_traceback)
+                        #  print(exc_type, exc_value)
+                        #  tb.print_tb(exc_traceback)
                         # print(repr(tb.extract_tb(exc_traceback)[1].name))
                         stack = tb.extract_tb(exc_traceback)
                         err_fn = stack[-1].name
                         lineno = stack[-2].lineno
                         # TODO: analyze lineno to figure out what method call caused the error
-                        print(err_fn, lineno)
-                        self._rtest_generator.add_err_comb(err_fn, None)
+                        #  print(exc_value)
+                        err_call = individual.analyze_err(stack)
+                        self._rtest_generator.add_err_comb(err_call)
                         restart = True
                         indiv_score = -1
-                        raise
                     except IndexError:
                         indiv_score = 0
 
@@ -170,15 +171,15 @@ class GeneticEnvironment(object):
         return (child1, child2)
 
     def _mutation(self, indiv):
-        if indiv.get_const_inputs() :
-            children_const_inputs = self._make_input_mutation(indiv.get_const_inputs())
+        if indiv.get_const_inputs():
+            children_const_inputs = self._make_input_mutation('__init__', indiv.get_const_inputs())
             indiv.set_const_inputs(children_const_inputs)
 
         if indiv.get_method_seq() :
             children_method_seq = self._make_method_mutation(indiv.get_method_seq())
             indiv.set_method_seq(children_method_seq)
 
-        children_mut_inputs = self._make_input_mutation(indiv.get_mut_inputs())
+        children_mut_inputs = self._make_input_mutation(indiv.mut_name(), indiv.get_mut_inputs())
         indiv.set_mut_inputs(children_mut_inputs)
 
         return indiv
@@ -195,15 +196,20 @@ class GeneticEnvironment(object):
             child = method_seq[:index] + method_seq[(index+1):]
         return child
 
-    def _make_input_mutation(self, arg_seq):
+    def _make_input_mutation(self, func_name: str, arg_seq: List[ArgInput]):
         # for argument lists
-        change_idx = random.randint(0, len(arg_seq) - 1)
-        runprob = random.randint(0, 1)
-        if runprob == 0:
-            child = self._rtest_generator.any_rand_input()
-        elif runprob == 1:
-            child = self._rtest_generator.type_same_new_val(arg_seq[change_idx])
-        arg_seq[change_idx] = child
+        while True:
+            change_idx = random.randint(0, len(arg_seq) - 1)
+            runprob = random.randint(0, 1)
+            if runprob == 0:
+                child = self._rtest_generator.any_rand_input()
+                arg_seq[change_idx] = child
+                if not self._rtest_generator.is_err_comb(func_name, arg_seq):
+                    break
+            else:
+                child = self._rtest_generator.same_type_new_val(arg_seq[change_idx])
+                arg_seq[change_idx] = child
+                break
         return arg_seq
 
 #ge = GeneticEnvironment('apple', 'pear')

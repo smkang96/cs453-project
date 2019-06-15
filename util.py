@@ -3,9 +3,12 @@ import astor
 import random
 import string
 from os.path import abspath
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Set, Any
 
 from individual import ArgInput, MethodCall, Individual
+
+def to_type_comb(inputs: List[ArgInput]):
+    return tuple(map(lambda x: x.type(), inputs))
 
 class ArgInfo():
     def __init__(self, name):
@@ -43,6 +46,7 @@ class Analyzer(ast.NodeVisitor):
         self._file_name: str = abspath(file_name)
         self._class_name: str = class_name
         self._func_list: List[FuncInfo] = []
+        self._constructor = None
 
         tree = astor.parse_file(self._file_name)
         tree.parent = None
@@ -78,7 +82,11 @@ class Analyzer(ast.NodeVisitor):
         start = m.lineno
         end = endline(m)
         arg_infos = list(map(lambda arg: ArgInfo(arg.arg), m.args.args))
-        self._func_list.append(FuncInfo(m.name, arg_infos, (start, end)))
+        func_info = FuncInfo(m.name, arg_infos, (start, end))
+        if m.name == '__init__':
+            self._constuctor = func_info
+        else:
+            self._func_list.append(func_info)
 
     def funcs(self) -> List[FuncInfo]:
         '''returns the methods in the class, a list of FuncInfo objs'''
@@ -88,6 +96,8 @@ class Analyzer(ast.NodeVisitor):
         for func in self._func_list:
             if func.name() == func_name:
                 return func
+        if func_name == '__init__':
+            return self._constuctor
         assert False
 
     def num_methods(self):
@@ -108,11 +118,18 @@ class RandomTestGenerator(object):
         self._float_max_val = float_max_val
         self._max_fseq_num = max_fseq_num
         # arg type combination that led to TypeError or AttributeError
-        self._err_comb = {} # func_name |-> Set[List[Type]]
+        self._err_comb: Dict[str, Set[Any]] = {} # func_name |-> Set[(TypeName,...)]
+        self._err_comb['__init__'] = set()
+        for func in self._analyzer.funcs():
+            self._err_comb[func.name()] = set()
 
-    # TODO: implement.
-    def add_err_comb(self, func_name, type_comb):
-        pass
+    def add_err_comb(self, call: MethodCall):
+        self._err_comb[call.method_name()].add(to_type_comb(call.inputs()))
+        # print("add", call.method_name(), to_type_comb(call.inputs()))
+
+    def is_err_comb(self, func_name, inputs: List[ArgInput]):
+        return to_type_comb(inputs) in self._err_comb[func_name]
+
 
     # TODO: remember the stuff generated so far, and occasionally return them instead of another random value
     # TODO: when generating args for method call, check if they are in err_comb
@@ -135,7 +152,7 @@ class RandomTestGenerator(object):
         rand_val = 2*self._float_max_val*random.random()-self._float_max_val
         return ArgInput('float', rand_val)
 
-    def type_same_new_val(self, input_node):
+    def same_type_new_val(self, input_node):
         input_type = input_node.type()
         if input_type == 'int':
             return self._rand_int()
@@ -160,12 +177,16 @@ class RandomTestGenerator(object):
         rand_func_args = self.fill_args(rand_func.name())
         return MethodCall(rand_func.name(), rand_func_args)
 
-
-    def fill_args(self, func_name):
+    def fill_args(self, func_name) -> List[ArgInput]:
         num_args = self._analyzer.func_info(func_name).arg_num()
-        arg_list = [None] * num_args
-        for i in range(num_args):
-            arg_list[i] = self.any_rand_input()
+        while True:
+            arg_list = []
+            for _ in range(num_args):
+                arg_list.append(self.any_rand_input())
+            if to_type_comb(arg_list) in self._err_comb[func_name]:
+                #  print(func_name, to_type_comb(arg_list), "not allowed")
+                continue
+            break
         return arg_list
 
     def fill_method_seq(self):
