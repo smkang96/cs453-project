@@ -61,18 +61,15 @@ class GeneticEnvironment(object):
 
                 # evaluate individuals
                 for individual in curr_pop:
-                    try:
-                        indiv_score = self.evaluate(individual)
-                    except (TypeError, AttributeError) as e:
-                        exc_type, exc_value, exc_traceback = sys.exc_info()
-                        stack = tb.extract_tb(exc_traceback)
+                    indiv_score, stack = self.evaluate(individual)
+                    if stack:
+                        # exc_type, exc_value, exc_traceback = sys.exc_info()
+                        # stack = tb.extract_tb(exc_traceback)
                         err_call = individual.analyze_err(stack)
                         self._rtest_generator.add_err_comb(err_call)
                         # TypeError -> restart
                         restart = True
                         break
-                    except IndexError:
-                        indiv_score = 0
 
                     max_indiv_score = indiv_score if indiv_score > max_indiv_score else max_indiv_score
                     # TODO: don't add obviously useless individuals with negative score.
@@ -108,11 +105,17 @@ class GeneticEnvironment(object):
             print('max individual score :', max_indiv_score)
             return curr_pop, max_indiv_score, curr_pop[:]
 
-    def evaluate(self, ind) -> float:
+    def evaluate(self, ind): # score, stack
         # monitor coverage and run each individual
+        stack = None
         cov = coverage.Coverage(branch=True)
         cov.start()
-        ind.run()
+        try:
+            ind.run()
+            _, _, exc_traceback = sys.exc_info()
+            stack = tb.extract_tb(exc_traceback)
+        except Exception:
+            pass
         cov.stop()
         cov.save()
 
@@ -126,7 +129,7 @@ class GeneticEnvironment(object):
                 total += _total
                 taken += _taken
         # analysis.branch_stats() is empty if there is no branch
-        return taken / total if total > 0 else 1
+        return (taken / total if total > 0 else 1), stack
 
     def _crossover(self, father, mother):
         children_method_seq = self._cut_and_splice_crossover(father.get_method_seq(), mother.get_method_seq())

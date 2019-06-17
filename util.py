@@ -124,7 +124,8 @@ class RandomTestGenerator(object):
             self._err_comb[func.name()] = set()
 
     def add_err_comb(self, call: MethodCall):
-        self._err_comb[call.method_name()].add(to_type_comb(call.inputs()))
+        comb = to_type_comb(call.inputs())
+        self._err_comb[call.method_name()].add(comb)
 
     def is_err_comb(self, func_name, inputs: List[ArgInput]):
         return to_type_comb(inputs) in self._err_comb[func_name]
@@ -178,12 +179,16 @@ class RandomTestGenerator(object):
 
     def fill_args(self, func_name) -> List[ArgInput]:
         num_args = self._analyzer.func_info(func_name).arg_num()
+        count = 0
         while True:
             arg_list = []
             for _ in range(num_args):
                 arg_list.append(self.any_rand_input())
+            if count > 20:
+                return arg_list
             if not self.is_err_comb(func_name, arg_list):
                 break
+            count += 1
         return arg_list
 
     def fill_method_seq(self):
