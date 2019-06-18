@@ -3,8 +3,11 @@ import random
 import copy
 import string
 import coverage
+import traceback as tb
+import sys
 
-from util import Analyzer, RandomTestGenerator
+from individual import *
+from util import *
 '''Test Case Generator for Python'''
 
 
@@ -50,15 +53,40 @@ class GeneticEnvironment(object):
         init_pop = self._sample_init_pop()
         curr_pop = init_pop
         max_indiv_score = 0
+        restart = False
+
+        best_score_record = []
 
         for gen_idx in range(self._gen_num):
             curr_pop_score = []
 
             # evaluate individuals
-            for individual in curr_pop:
-                indiv_score = self.evaluate(individual)
+            for i_idx, individual in enumerate(curr_pop):
+                indiv_score, stack = self.evaluate(individual)
+                if stack:
+                    # exc_type, exc_value, exc_traceback = sys.exc_info()
+                    # stack = tb.extract_tb(exc_traceback)
+                    err_call = individual.analyze_err(stack)
+                    self._rtest_generator.add_err_comb(err_call)
+                    # TypeError -> restart ... is excessive IMO
+                    # restart = True
+
                 max_indiv_score = indiv_score if indiv_score > max_indiv_score else max_indiv_score
-                curr_pop_score.append((individual, indiv_score))
+                # TODO: don't add obviously useless individuals with negative score.
+                # TODO: currently this doesn't do something meaningful
+                if indiv_score >= 0:
+                    curr_pop_score.append((individual, indiv_score))
+                if (i_idx > 0 and i_idx % 50 == 49):
+                    best_score_record.append(max_indiv_score)
+
+
+            print("gen_idx: ", gen_idx, "# curr_pop", len(curr_pop_score))
+            # TODO: if too many useless individuals, just restart
+            restart |= len(curr_pop_score) < 6
+            if restart:
+                print('restart at', gen_idx)
+                break
+
             sel_indivs = self._tournament_sel(curr_pop_score)
 
             # crossover (the paper isn't very clear here) & mutation
@@ -73,14 +101,24 @@ class GeneticEnvironment(object):
 
             # cleanup
             curr_pop = new_gen[:]
-        print('max individual score :', max_indiv_score)
-        return curr_pop, max_indiv_score # end after given number of iterations
 
-    def evaluate(self, ind) -> float:
+        print('max individual score :', max_indiv_score)
+        overall_cov = self.batch_eval(curr_pop)
+        print('overall coverage:', overall_cov)
+        return curr_pop, best_score_record, overall_cov
+
+    def evaluate(self, ind): # score, stack
         # monitor coverage and run each individual
+        stack = None
         cov = coverage.Coverage(branch=True)
         cov.start()
-        ind.run()
+        try:
+            ind.run()
+        except (TypeError, AttributeError):
+            _, _, exc_traceback = sys.exc_info()
+            stack = tb.extract_tb(exc_traceback)
+        except Exception:
+            pass
         cov.stop()
         cov.save()
 
@@ -94,7 +132,30 @@ class GeneticEnvironment(object):
                 total += _total
                 taken += _taken
         # analysis.branch_stats() is empty if there is no branch
-        return taken / total if total > 0 else 1
+        return (taken / total if total > 0 else 1), stack
+
+    def batch_eval(self, inds):
+        cov = coverage.Coverage(branch=True)
+        cov.start()
+        for ind in inds:
+            try:
+                ind.run()
+            except:
+                pass
+        cov.stop()
+        cov.save()
+
+        analysis = cov._analyze(ind.file_name())
+        stats = analysis.branch_stats()  # branch line |-> (total, taken)
+        start, end = self._analyzer.func_info(ind.mut_name()).lines()
+        total = 0
+        taken = 0
+        for b_line, (_total, _taken) in stats.items():
+            if start <= b_line <= end:
+                total += _total
+                taken += _taken
+        # analysis.branch_stats() is empty if there is no branch
+        return (taken / total if total > 0 else 1)
 
     def _crossover(self, father, mother):
         children_method_seq = self._cut_and_splice_crossover(father.get_method_seq(), mother.get_method_seq())
@@ -133,15 +194,15 @@ class GeneticEnvironment(object):
         return (child1, child2)
 
     def _mutation(self, indiv):
-        if indiv.get_const_inputs() :
-            children_const_inputs = self._make_input_mutation(indiv.get_const_inputs())
+        if indiv.get_const_inputs():
+            children_const_inputs = self._make_input_mutation('__init__', indiv.get_const_inputs())
             indiv.set_const_inputs(children_const_inputs)
 
         if indiv.get_method_seq() :
             children_method_seq = self._make_method_mutation(indiv.get_method_seq())
             indiv.set_method_seq(children_method_seq)
 
-        children_mut_inputs = self._make_input_mutation(indiv.get_mut_inputs())
+        children_mut_inputs = self._make_input_mutation(indiv.mut_name(), indiv.get_mut_inputs())
         indiv.set_mut_inputs(children_mut_inputs)
 
         return indiv
@@ -158,16 +219,23 @@ class GeneticEnvironment(object):
             child = method_seq[:index] + method_seq[(index+1):]
         return child
 
-    def _make_input_mutation(self, arg_seq):
+    def _make_input_mutation(self, func_name: str, arg_seq: List[ArgInput]):
         # for argument lists
-        change_idx = random.randint(0, len(arg_seq) - 1)
-        runprob = random.randint(0, 1)
-        if runprob == 0:
-            child = self._rtest_generator.any_rand_input()
-        elif runprob == 1:
-            child = self._rtest_generator.type_same_new_val(arg_seq[change_idx])
-        arg_seq[change_idx] = child
-        return arg_seq
+        mutated = arg_seq[:]
+        while True:
+            mutated = arg_seq[:]
+            change_idx = random.randint(0, len(arg_seq) - 1)
+            runprob = random.randint(0, 1)
+            if runprob == 0:
+                child = self._rtest_generator.any_rand_input()
+                mutated[change_idx] = child
+                if not self._rtest_generator.is_err_comb(func_name, mutated):
+                    break
+            else:
+                child = self._rtest_generator.same_type_new_val(mutated[change_idx])
+                mutated[change_idx] = child
+                break
+        return mutated
 
 #ge = GeneticEnvironment('apple', 'pear')
 #print(ge._tournament_sel(list((i, i) for i in range(50))))
