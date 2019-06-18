@@ -50,60 +50,62 @@ class GeneticEnvironment(object):
 
     def evolve(self):
         '''returns best individuals'''
-        while True:
-            init_pop = self._sample_init_pop()
-            curr_pop = init_pop
-            max_indiv_score = 0
-            restart = False
+        init_pop = self._sample_init_pop()
+        curr_pop = init_pop
+        max_indiv_score = 0
+        restart = False
 
-            for gen_idx in range(self._gen_num):
-                curr_pop_score = []
+        best_score_record = []
 
-                # evaluate individuals
-                for individual in curr_pop:
-                    indiv_score, stack = self.evaluate(individual)
-                    if stack:
-                        # exc_type, exc_value, exc_traceback = sys.exc_info()
-                        # stack = tb.extract_tb(exc_traceback)
-                        err_call = individual.analyze_err(stack)
-                        self._rtest_generator.add_err_comb(err_call)
-                        # TypeError -> restart
-                        restart = True
-                        break
+        for gen_idx in range(self._gen_num):
+            curr_pop_score = []
 
-                    max_indiv_score = indiv_score if indiv_score > max_indiv_score else max_indiv_score
-                    # TODO: don't add obviously useless individuals with negative score.
-                    # TODO: currently this doesn't do something meaningful
-                    if indiv_score >= 0:
-                        curr_pop_score.append((individual, indiv_score))
+            # evaluate individuals
+            for i_idx, individual in enumerate(curr_pop):
+                indiv_score, stack = self.evaluate(individual)
+                if stack:
+                    # exc_type, exc_value, exc_traceback = sys.exc_info()
+                    # stack = tb.extract_tb(exc_traceback)
+                    err_call = individual.analyze_err(stack)
+                    self._rtest_generator.add_err_comb(err_call)
+                    # TypeError -> restart ... is excessive IMO
+                    # restart = True
 
-                print("gen_idx: ", gen_idx, "# curr_pop", len(curr_pop_score))
-                # TODO: if too many useless individuals, just restart
-                restart |= len(curr_pop_score) < 6
-                if restart:
-                    print('restart at', gen_idx)
-                    break
+                max_indiv_score = indiv_score if indiv_score > max_indiv_score else max_indiv_score
+                # TODO: don't add obviously useless individuals with negative score.
+                # TODO: currently this doesn't do something meaningful
+                if indiv_score >= 0:
+                    curr_pop_score.append((individual, indiv_score))
+                if (i_idx > 0 and i_idx % 50 == 49):
+                    best_score_record.append(max_indiv_score)
 
-                sel_indivs = self._tournament_sel(curr_pop_score)
 
-                # crossover (the paper isn't very clear here) & mutation
-                new_gen = sel_indivs[:]
-                while len(new_gen) < self._pop_size:
-                    parents = np.random.choice(sel_indivs, size=2, replace=False)
-                    new_indiv = self._crossover(parents[0], parents[1])
-                    for indiv in new_indiv :
-                        if np.random.uniform() < self._mutate_rate:
-                            indiv = self._mutation(indiv)
-                        new_gen.append(indiv)
-
-                # cleanup
-                curr_pop = new_gen[:]
-
+            print("gen_idx: ", gen_idx, "# curr_pop", len(curr_pop_score))
+            # TODO: if too many useless individuals, just restart
+            restart |= len(curr_pop_score) < 6
             if restart:
-                continue
+                print('restart at', gen_idx)
+                break
 
-            print('max individual score :', max_indiv_score)
-            return curr_pop, max_indiv_score, curr_pop[:]
+            sel_indivs = self._tournament_sel(curr_pop_score)
+
+            # crossover (the paper isn't very clear here) & mutation
+            new_gen = sel_indivs[:]
+            while len(new_gen) < self._pop_size:
+                parents = np.random.choice(sel_indivs, size=2, replace=False)
+                new_indiv = self._crossover(parents[0], parents[1])
+                for indiv in new_indiv :
+                    if np.random.uniform() < self._mutate_rate:
+                        indiv = self._mutation(indiv)
+                    new_gen.append(indiv)
+
+            # cleanup
+            curr_pop = new_gen[:]
+
+        print('max individual score :', max_indiv_score)
+        overall_cov = self.batch_eval(curr_pop)
+        print('overall coverage:', overall_cov)
+        return curr_pop, best_score_record, overall_cov
 
     def evaluate(self, ind): # score, stack
         # monitor coverage and run each individual
@@ -112,6 +114,7 @@ class GeneticEnvironment(object):
         cov.start()
         try:
             ind.run()
+        except (TypeError, AttributeError):
             _, _, exc_traceback = sys.exc_info()
             stack = tb.extract_tb(exc_traceback)
         except Exception:
@@ -130,6 +133,29 @@ class GeneticEnvironment(object):
                 taken += _taken
         # analysis.branch_stats() is empty if there is no branch
         return (taken / total if total > 0 else 1), stack
+
+    def batch_eval(self, inds):
+        cov = coverage.Coverage(branch=True)
+        cov.start()
+        for ind in inds:
+            try:
+                ind.run()
+            except:
+                pass
+        cov.stop()
+        cov.save()
+
+        analysis = cov._analyze(ind.file_name())
+        stats = analysis.branch_stats()  # branch line |-> (total, taken)
+        start, end = self._analyzer.func_info(ind.mut_name()).lines()
+        total = 0
+        taken = 0
+        for b_line, (_total, _taken) in stats.items():
+            if start <= b_line <= end:
+                total += _total
+                taken += _taken
+        # analysis.branch_stats() is empty if there is no branch
+        return (taken / total if total > 0 else 1)
 
     def _crossover(self, father, mother):
         children_method_seq = self._cut_and_splice_crossover(father.get_method_seq(), mother.get_method_seq())

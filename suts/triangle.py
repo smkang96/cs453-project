@@ -4,7 +4,7 @@ Copyright John Poyau
 
 A program that reads three numbers.The three numbers
 represent the lengths of the sides of a triangle. The program 
-prints a message that states whether the triangle is scalene, isosceles, 
+# prints a message that states whether the triangle is scalene, isosceles, 
 or equilateral, and whether it is a right triangle as well.
 
 For example
@@ -75,16 +75,16 @@ class Triangle:
     def testTriangle(self, sideA, sideB, sideC):
         response = "Sides of length ({0},{1},{2})".format(sideA, sideB, sideC)
         if not self.isValidLength(sideA, sideB, sideC):
-            print("Error: {0} are invalid. all sides length must positive".format(response))
+            # print("Error: {0} are invalid. all sides length must positive".format(response))
             return 
 
         if not self.isValidTriangleSides(sideA, sideB, sideC):
-            print(response+" cannot form a triangle")
+            # print(response+" cannot form a triangle")
             return
 
         response = response + " forms a"	
         if self.isEquilateralTriangle(sideA, sideB, sideC):
-            print(response+"n equilateral triangle")
+            # print(response+"n equilateral triangle")
             return
 
         if self.isIsoscelesTriangle(sideA, sideB, sideC):
@@ -98,7 +98,7 @@ class Triangle:
             response = response + " scalene"
 
         response = response + " triangle"
-        print(response)
+        # print(response)
 
     def triangle(self, argv):
         # Check that we only have three arguments.
@@ -113,4 +113,5 @@ class Triangle:
         try:
             testTriangle(sideA, sideB, sideC)
         except Exception:
-            print("\nError: Cannot process triangle sides\n")
+            pass
+            # print("\nError: Cannot process triangle sides\n")

@@ -65,13 +65,17 @@ if __name__ == '__main__':
     rep_num = parser.repeat_num
     suite = []
 
-    ge = GeneticEnvironment(fname, cname, mutname, modname, gen_num, pop_size)
+    # ge = GeneticEnvironment(fname, cname, mutname, modname, gen_num, pop_size)
     max_vals = []
+    f = open('rand_results/%s_results.txt' % (mutname,), 'w')
     for i in range(rep_num):
+        ge = GeneticEnvironment(fname, cname, mutname, modname, gen_num, pop_size)
         print('%d th try' % (i+1))
-        _, max_val, inds = ge.evolve()
-        max_vals.append(max_val)
+        _, max_val_record, inds = ge.evolve()
+        f.write(str(max_val_record) + '\n')
+        max_vals.append(max_val_record[-1])
         suite.append(inds)
 
+    f.close()
     print('Final result mean: %.3f' % np.mean(max_vals))
     print('final result std: %.3f' % np.std(max_vals))
