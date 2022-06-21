@@ -1,4 +1,4 @@
 astor==0.8.0
 coverage==4.5.3
-numpy==1.16.3
+numpy==1.22.0
 python-stdnum==1.11
